@@ -1,22 +1,26 @@
 import pygame
 from sys import exit
 import math
+import random
+import time
+import threading
 
 pygame.init()
+pygame.time.Clock
 
 # Constantes
 W, H = 1000, 600
 VELOCIDAD = 15
 GRAVEDAD = 1
-FUERZA_INICIAL = 50
+FUERZA_INICIAL = 20
 FUERZA_MAXIMA = 100
-FUERZA_MINIMA = 0
+FUERZA_MINIMA = 15
 INCREMENTO_FUERZA = 1
 INTERVALO_TIEMPO = 0.2
 ALTURA_SALTO = 10
 PERSONAJE_OFFSET_X = 280
 PERSONAJE_OFFSET_Y = 180
-CANICA_DIMENSIONES = (17.6, 15.53)
+CANICA_DIMENSIONES = (14.6, 12.53)
 PERSONAJE_DIMENSIONES = (400, 324)
 
 # Configuración de la pantalla
@@ -32,11 +36,25 @@ fondo_surface = pygame.transform.scale(fondo_surface, (W, H))
 # Canica
 canica = pygame.image.load('imagenes/canica.png').convert_alpha()
 canica = pygame.transform.scale(canica, CANICA_DIMENSIONES)
+canica_rect = canica.get_rect()
 
 # Bolirana
-bolirana = pygame.image.load('imagenes/bolirana.png').convert_alpha()
+bolirana = pygame.image.load('imagenes/bolirana1.png').convert_alpha()
 bolirana = pygame.transform.flip(bolirana, True, False)
 bolirana = pygame.transform.scale(bolirana, (400,400))
+
+# Ranas 
+rana1 = pygame.image.load('imagenes/green.png').convert_alpha()
+rana1 = pygame.transform.scale(rana1, (39.1,40.8))
+rana1_rect = rana1.get_rect(topleft=(700,380))
+
+rana2 = pygame.image.load('imagenes/silver.png').convert_alpha()
+rana2 = pygame.transform.scale(rana2, (32.7, 33.86))
+rana2_rect = rana2.get_rect(topleft=(770,370))
+
+rana3 = pygame.image.load('imagenes/golden.png').convert_alpha()
+rana3 = pygame.transform.scale(rana3, (24.55, 25.44))
+rana3_rect = rana3.get_rect(topleft=(820,360))
 
 # Personaje
 quieto = pygame.image.load('imagenes/Quieto/Idle.png')
@@ -51,6 +69,14 @@ camina_izq = [pygame.transform.flip(img, True, False) for img in camina]
 lanzamiento = [pygame.transform.scale(pygame.image.load(f'imagenes/imagenes-lanzamiento/Attack_{i}.png'), PERSONAJE_DIMENSIONES) for i in range(2, 10)]
 
 salto_lista = [pygame.transform.scale(pygame.image.load(f'imagenes/Salto/Jump-{i}.png'), PERSONAJE_DIMENSIONES) for i in range(1, 9)]
+
+#musica
+pygame.mixer.init()
+lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/musica/cancion{i}.mp3")) for i in range(1,9)]
+
+#canciones
+cambiar_cancion = threading.Event()
+muted = False
 
 # Variables del personaje y juego
 px, py = 50, 200
@@ -73,18 +99,49 @@ canica_vy = 0
 
 fuerza_lanzamiento = FUERZA_INICIAL
 
-# Fuente para texto
-font = pygame.font.Font(None, 36)
+puntaje = 0  # Variable to keep track of the score
+intentos_restantes = 5  # Variable to keep track of remaining attempts
+
+pygame.font.init()
+font = pygame.font.SysFont("Comic Sans MS",25)
+
+
+
+def reproducir_musica_aleatoria_indefinidamente(lista_musica_fondo, cambiar_musica_event):
+    global muted
+    while True:
+        random.shuffle(lista_musica_fondo)
+        for sonido in lista_musica_fondo:
+            sonido.play()
+            # Esperar hasta que el sonido termine de reproducirse o se presione "N", o se mutee con "M"
+            while pygame.mixer.get_busy():
+                if cambiar_musica_event.is_set():
+                    sonido.stop() 
+                    cambiar_musica_event.clear()
+                    break
+                time.sleep(0.1)
+                if muted:
+                    pygame.mixer.Sound.set_volume(sonido, 0)
+                else:
+                    pygame.mixer.Sound.set_volume(sonido, 1)
+
+
+# Empezar musica en un hilo separado
+threading.Thread(target=reproducir_musica_aleatoria_indefinidamente, args=(lista_musica_fondo, cambiar_cancion), daemon=True).start()
 
 def lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento):
-    global canica_lanzada, canica_x, canica_y, canica_vx, canica_vy
-    canica_lanzada = True
-    canica_x = px + PERSONAJE_OFFSET_X
-    canica_y = py + PERSONAJE_OFFSET_Y
+    global canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, intentos_restantes
+    if intentos_restantes > 0 and not canica_lanzada:
+        canica_lanzada = True
+        canica_x = px + PERSONAJE_OFFSET_X
+        canica_y = py + PERSONAJE_OFFSET_Y
 
-    radianes = math.radians(angulo_lanzamiento)
-    canica_vx = fuerza_lanzamiento * math.cos(radianes)
-    canica_vy = -fuerza_lanzamiento * math.sin(radianes)
+        radianes = math.radians(angulo_lanzamiento)
+        canica_vx = fuerza_lanzamiento * math.cos(radianes)
+        canica_vy = -fuerza_lanzamiento * math.sin(radianes)
+
+        intentos_restantes -= 1
+        
 
 def calcular_trayectoria(px, py, angulo_lanzamiento, fuerza_lanzamiento):
     trayectoria = []
@@ -103,10 +160,16 @@ def calcular_trayectoria(px, py, angulo_lanzamiento, fuerza_lanzamiento):
         tiempo += INTERVALO_TIEMPO  # Aumentar el intervalo de tiempo para espaciar más los puntos
     return trayectoria
 
-def recargaPantalla():
-    global cuentaPasos, lanzado, cuentaLanzamiento, salto, cuentaSalto, cuentaSalto_lista, px, py, izquierda, derecha, canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, canica_pos, angulo_lanzamiento, fuerza_lanzamiento
+# Create masks for the marble and frogs
+canica_mask = pygame.mask.from_surface(canica)
+rana1_mask = pygame.mask.from_surface(rana1)
+rana2_mask = pygame.mask.from_surface(rana2)
+rana3_mask = pygame.mask.from_surface(rana3)
 
-    # Actualizar la animación del personaje
+def recargaPantalla():
+    global cuentaPasos, lanzado, cuentaLanzamiento, salto, cuentaSalto, cuentaSalto_lista, px, py, izquierda, derecha, canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, canica_pos, angulo_lanzamiento, fuerza_lanzamiento, puntaje, intentos_restantes
+
+    # Update the character animation
     if cuentaPasos + 1 >= len(camina):
         cuentaPasos = 0
 
@@ -136,40 +199,72 @@ def recargaPantalla():
     else:
         PANTALLA.blit(quieto, (px, py))
 
-    # Actualizar la posición de la canica si está lanzada
+    # Update marble position if launched
     if canica_lanzada:
         canica_x += canica_vx
         canica_y += canica_vy
         canica_vy += GRAVEDAD
+
+        # Update the position of the marble's rect
+        canica_rect.topleft = (canica_x, canica_y)
+
+        # Check for precise pixel-perfect collisions with frogs
+        offset_rana1 = (rana1_rect.x - canica_rect.x, rana1_rect.y - canica_rect.y)
+        offset_rana2 = (rana2_rect.x - canica_rect.x, rana2_rect.y - canica_rect.y)
+        offset_rana3 = (rana3_rect.x - canica_rect.x, rana3_rect.y - canica_rect.y)
+
+        collision_rana1 = canica_mask.overlap(rana1_mask, offset_rana1)
+        collision_rana2 = canica_mask.overlap(rana2_mask, offset_rana2)
+        collision_rana3 = canica_mask.overlap(rana3_mask, offset_rana3)
+
+        if collision_rana1:
+            puntaje += 100
+            canica_lanzada = False  # Reset marble if it hits a frog
+            
+        elif collision_rana2:
+            puntaje += 200
+            canica_lanzada = False
+            
+        elif collision_rana3:
+            puntaje+= 500
+            canica_lanzada = False        
 
         if canica_y > H:
             canica_lanzada = False
 
         PANTALLA.blit(canica, (canica_x, canica_y))
 
-    # Dibujar línea de ángulo de lanzamiento
+    # Draw launch angle line
     if ajustando_angulo:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         pygame.draw.line(PANTALLA, (255, 0, 0), (px + PERSONAJE_OFFSET_X, py + PERSONAJE_OFFSET_Y), (mouse_x, mouse_y), 2)
 
-    # Calcular y dibujar la trayectoria inicial del balín
+    # Calculate and draw marble trajectory
     trayectoria = calcular_trayectoria(px, py, angulo_lanzamiento, fuerza_lanzamiento)
     for punto in trayectoria:
-        pygame.draw.circle(PANTALLA, (255, 255, 255), (int(punto[0]), int(punto[1])), 3)  # Color blanco
+        pygame.draw.circle(PANTALLA, (255, 255, 255), (int(punto[0]), int(punto[1])), 3)  # White color
 
-    # Mostrar ángulo y fuerza en la pantalla
+    # Display angle and force on screen
     angulo_texto = font.render(f"Ángulo: {int(angulo_lanzamiento)}°", True, (255, 255, 255))
     PANTALLA.blit(angulo_texto, (10, 10))
 
     fuerza_texto = font.render(f"Fuerza: {fuerza_lanzamiento}", True, (255, 255, 255))
     PANTALLA.blit(fuerza_texto, (10, 50))
 
-    # Dibujar la barra de fuerza
+    # Draw force bar
     barra_rect = pygame.Rect(10, 90, fuerza_lanzamiento * 2, 20)
     pygame.draw.rect(PANTALLA, (0, 255, 0), barra_rect)
 
-    pygame.display.update()
+    # Display score on screen
+    puntaje_texto = font.render(f"Puntaje: {puntaje}", True, (255, 255, 255))
+    PANTALLA.blit(puntaje_texto, (W - 200, 10))
 
+    # Display remaining attempts on screen
+    intentos_texto = font.render(f"Intentos restantes: {intentos_restantes}", True, (255, 255, 255))
+    PANTALLA.blit(intentos_texto, (W - 260, 50))
+
+    pygame.display.update()
+    
 # Configuración del reloj del juego
 RELOJ = pygame.time.Clock()
 
@@ -186,11 +281,11 @@ while ejecuta:
         if event.type == pygame.QUIT:
             ejecuta = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Botón izquierdo del ratón
+            if event.button == 1:  # Left mouse button
                 ajustando_angulo = True
-            elif event.button == 4:  # Rueda del ratón hacia arriba
+            elif event.button == 4:  # Mouse wheel up
                 angulo_lanzamiento += 1
-            elif event.button == 5:  # Rueda del ratón hacia abajo
+            elif event.button == 5:  # Mouse wheel down
                 angulo_lanzamiento -= 1
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
@@ -201,76 +296,89 @@ while ejecuta:
                 dx = mouse_x - (px + PERSONAJE_OFFSET_X)
                 dy = (py + PERSONAJE_OFFSET_Y) - mouse_y
                 angulo_lanzamiento = math.degrees(math.atan2(dy, dx))
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_n:
+                cambiar_cancion.set()
+            elif event.key == pygame.K_m:
+                muted = not muted               
 
-    keys = pygame.key.get_pressed()  # Realiza acciones de las teclas manteniéndolas pulsadas. Repite el movimiento.
+    keys = pygame.key.get_pressed()
 
-    # Incrementar y decrementar la fuerza con las teclas de flecha arriba y abajo
+    # Increment and decrement force with up and down arrow keys
     if keys[pygame.K_UP]:
-        fuerza_lanzamiento = min(fuerza_lanzamiento + INCREMENTO_FUERZA, FUERZA_MAXIMA)  # Aumentar la fuerza hasta un máximo de 100
+        fuerza_lanzamiento = min(fuerza_lanzamiento + INCREMENTO_FUERZA, FUERZA_MAXIMA)
     if keys[pygame.K_DOWN]:
-        fuerza_lanzamiento = max(fuerza_lanzamiento - INCREMENTO_FUERZA, FUERZA_MINIMA)  # Disminuir la fuerza hasta un mínimo de 0
+        fuerza_lanzamiento = max(fuerza_lanzamiento - INCREMENTO_FUERZA, FUERZA_MINIMA)
 
-    # Tecla X: lanzamiento de la canica
+    # Key X: launch the marble
     if keys[pygame.K_x]:
-        lanzado = True  # comienza la animación del lanzamiento
-        izquierda = False
-        derecha = False
-        cuentaPasos = 0
-        lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento)  # llamamos la función lanzar_canica con el ángulo actual
+        if intentos_restantes > 0:  # Check if there are remaining attempts
+            lanzado = True
+            izquierda = False
+            derecha = False
+            cuentaPasos = 0
+            lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento)
 
-    # Tecla A: movimiento a la izquierda
+    # Key A: move left
     if keys[pygame.K_a] and px > -200:
         px -= VELOCIDAD
         izquierda = True
         derecha = False
 
-    # Tecla D: movimiento a la derecha
-    elif keys[pygame.K_d] and px < 900 - VELOCIDAD - 40:  # márgenes de tope para que el personaje no se salga de la pantalla
+    # Key D: move right
+    elif keys[pygame.K_d] and px < 900 - VELOCIDAD - 40:
         px += VELOCIDAD
         izquierda = False
         derecha = True
         
-    # Tecla W: movimiento hacia arriba
-    elif keys[pygame.K_w] and py > 200:  # margen de límite
+    # Key W: move up
+    elif keys[pygame.K_w] and py > 200:
         py -= VELOCIDAD
         derecha = True
         
-    # Tecla S: movimiento hacia abajo
+    # Key S: move down
     elif keys[pygame.K_s] and py < 300:
         py += VELOCIDAD
         derecha = True    
         
-    # personaje quieto    
+    # Character idle    
     else:
         izquierda = False
         derecha = False
         cuentaPasos = 0
 
-    # Tecla Space: Salto
-    if not salto:  # verificamos si el personaje no está saltando
+    # Space key: Jump
+    if not salto:
         if keys[pygame.K_SPACE]:
-            salto = True  # personaje comenzó el salto
+            salto = True
             izquierda = False
             derecha = False
             cuentaPasos = 0
     else:
-        # si el salto es true, el personaje está en el aire
-        # el salto se controla con la variable cuentaSalto que empieza en 10 y decrece hasta -10.
         if cuentaSalto >= -10:
-            py -= cuentaSalto * 3  # le restamos cuentaSalto * 3 a la posición del personaje en y. RECORDAR QUE AL RESTAR ESTAMOS SUBIENDO EL PERSONAJE
-            cuentaSalto -= 1  # restamos cuentaSalto en cada ciclo para ir iterando en la animación
+            py -= cuentaSalto * 3
+            cuentaSalto -= 1
         else:
-            cuentaSalto = ALTURA_SALTO  # resetamos para el próximo salto
+            cuentaSalto = ALTURA_SALTO
             salto = False
-            cuentaSalto_lista = 0  # Resetear el índice de imágenes del salto para la próxima animación
+            cuentaSalto_lista = 0
 
-    # Dibujar el fondo y actualizar la pantalla
+    # Draw background and update screen
     PANTALLA.blit(fondo_surface, (0, 0))
     PANTALLA.blit(bolirana, (570, 190))
-    recargaPantalla()  # Actualizar y redibujar todos los elementos de la pantalla
+    PANTALLA.blit(rana1, rana1_rect)
+    PANTALLA.blit(rana2, rana2_rect)
+    PANTALLA.blit(rana3, rana3_rect)
+    recargaPantalla()
+
+    # Check if all attempts are used up
+    if intentos_restantes == 0:
+        # Reset game (or implement a game-over screen)
+        pygame.time.delay(2000)  # Wait for 2 seconds before resetting
+        intentos_restantes = 5
+        puntaje = 0
 
 pygame.quit()
-
 
 
     
