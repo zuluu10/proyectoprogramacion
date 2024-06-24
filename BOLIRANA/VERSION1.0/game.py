@@ -8,6 +8,7 @@ import threading
 pygame.init()
 pygame.time.Clock
 
+
 # Constantes
 W, H = 1000, 600
 VELOCIDAD = 15
@@ -69,6 +70,48 @@ camina_izq = [pygame.transform.flip(img, True, False) for img in camina]
 lanzamiento = [pygame.transform.scale(pygame.image.load(f'imagenes/imagenes-lanzamiento/Attack_{i}.png'), PERSONAJE_DIMENSIONES) for i in range(2, 10)]
 
 salto_lista = [pygame.transform.scale(pygame.image.load(f'imagenes/Salto/Jump-{i}.png'), PERSONAJE_DIMENSIONES) for i in range(1, 9)]
+
+#menú
+play = pygame.image.load('menu/play.png').convert_alpha()
+play.set_colorkey((0,0,0))
+
+help = pygame.image.load('menu/help.png').convert_alpha()
+
+quit = pygame.image.load('menu/quit.png').convert_alpha()
+
+controles = pygame.image.load('menu/controles.png').convert_alpha()
+controles = pygame.transform.scale(controles , (W,H))
+
+volver_button = pygame.image.load('menu/back-button.png').convert_alpha()
+volver_button = pygame.transform.scale(volver_button, (200,200))
+
+# Clase de los botones
+class Boton():
+    def __init__(self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+    
+    def draw(self):
+        # Dibujar el botón en la pantalla
+        PANTALLA.blit(self.image, (self.rect.x, self.rect.y))
+    
+    def is_clicked(self):
+        # Obtener posición del mouse y verificar si se hace clic en el botón
+        pos = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()[0]  # Obtener estado del botón izquierdo del mouse
+        
+        if self.rect.collidepoint(pos) and click:
+            return True
+        return False
+    
+# Crear las instancias de los botones
+botonplay = Boton(100, 0, play)
+botonhelp = Boton(100, 150, help)
+botonquit = Boton(100, 300, quit)
+botonback = Boton(50,50, volver_button)
+
+background = pygame.image.load("menu/background.png").convert()   
 
 #musica
 pygame.mixer.init()
@@ -141,6 +184,7 @@ def lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento):
         canica_vy = -fuerza_lanzamiento * math.sin(radianes)
 
         intentos_restantes -= 1
+
         
 
 def calcular_trayectoria(px, py, angulo_lanzamiento, fuerza_lanzamiento):
@@ -273,125 +317,140 @@ ejecuta = True
 angulo_lanzamiento = 45
 ajustando_angulo = False
 
-# Bucle principal del juego
+# Variable para controlar la ejecución del juego y el menú
+# Main game loop
+# Main game loop
+# Main game loop
+game_running = False
+key_pressed = False  # Track the X key state
+# Variable to track the current screen (menu, help, game)
+current_screen = 'menu'
+
 while ejecuta:
     RELOJ.tick(24)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            ejecuta = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Left mouse button
-                ajustando_angulo = True
-            elif event.button == 4:  # Mouse wheel up
-                angulo_lanzamiento += 1
-            elif event.button == 5:  # Mouse wheel down
-                angulo_lanzamiento -= 1
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                ajustando_angulo = False
-        elif event.type == pygame.MOUSEMOTION:
-            if ajustando_angulo:
-                mouse_x, mouse_y = event.pos
-                dx = mouse_x - (px + PERSONAJE_OFFSET_X)
-                dy = (py + PERSONAJE_OFFSET_Y) - mouse_y
-                angulo_lanzamiento = math.degrees(math.atan2(dy, dx))
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_n:
-                cambiar_cancion.set()
-            elif event.key == pygame.K_m:
-                muted = not muted               
+    if current_screen == 'menu':
+        PANTALLA.blit(background, (0, 0))
+        botonplay.draw()
+        botonhelp.draw()
+        botonquit.draw()
+        pygame.display.update()
 
-    keys = pygame.key.get_pressed()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ejecuta = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if botonplay.is_clicked():
+                    current_screen = 'game'
+                elif botonhelp.is_clicked():
+                    current_screen = 'help'
+                elif botonquit.is_clicked():
+                    ejecuta = False
 
-    # Increment and decrement force with up and down arrow keys
-    if keys[pygame.K_UP]:
-        fuerza_lanzamiento = min(fuerza_lanzamiento + INCREMENTO_FUERZA, FUERZA_MAXIMA)
-    if keys[pygame.K_DOWN]:
-        fuerza_lanzamiento = max(fuerza_lanzamiento - INCREMENTO_FUERZA, FUERZA_MINIMA)
+    elif current_screen == 'help':
+        PANTALLA.blit(controles, (0, 0))
+        botonback.draw()
+        pygame.display.update()
 
-    # Key X: launch the marble
-    if keys[pygame.K_x]:
-        if intentos_restantes > 0:  # Check if there are remaining attempts
-            lanzado = True
-            izquierda = False
-            derecha = False
-            cuentaPasos = 0
-            lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ejecuta = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if botonback.is_clicked():
+                    current_screen = 'menu'
 
-    # Key A: move left
-    if keys[pygame.K_a] and px > -200:
-        px -= VELOCIDAD
-        izquierda = True
-        derecha = False
+    elif current_screen == 'game':
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ejecuta = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    ajustando_angulo = True
+                elif event.button == 4:  # Mouse wheel up
+                    angulo_lanzamiento += 1
+                elif event.button == 5:  # Mouse wheel down
+                    angulo_lanzamiento -= 1
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    ajustando_angulo = False
+            elif event.type == pygame.MOUSEMOTION:
+                if ajustando_angulo:
+                    mouse_x, mouse_y = event.pos
+                    dx = mouse_x - (px + PERSONAJE_OFFSET_X)
+                    dy = (py + PERSONAJE_OFFSET_Y) - mouse_y
+                    angulo_lanzamiento = math.degrees(math.atan2(dy, dx))
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_n:
+                    cambiar_cancion.set()
+                elif event.key == pygame.K_m:
+                    muted = not muted
 
-    # Key D: move right
-    elif keys[pygame.K_d] and px < 900 - VELOCIDAD - 40:
-        px += VELOCIDAD
-        izquierda = False
-        derecha = True
-        
-    # Key W: move up
-    elif keys[pygame.K_w] and py > 200:
-        py -= VELOCIDAD
-        derecha = True
-        
-    # Key S: move down
-    elif keys[pygame.K_s] and py < 300:
-        py += VELOCIDAD
-        derecha = True    
-        
-    # Character idle    
-    else:
-        izquierda = False
-        derecha = False
-        cuentaPasos = 0
+        keys = pygame.key.get_pressed()
 
-    # Space key: Jump
-    if not salto:
-        if keys[pygame.K_SPACE]:
-            salto = True
-            izquierda = False
-            derecha = False
-            cuentaPasos = 0
-    else:
-        if cuentaSalto >= -10:
-            py -= cuentaSalto * 3
-            cuentaSalto -= 1
+        if keys[pygame.K_UP]:
+            fuerza_lanzamiento = min(fuerza_lanzamiento + INCREMENTO_FUERZA, FUERZA_MAXIMA)
+        if keys[pygame.K_DOWN]:
+            fuerza_lanzamiento = max(fuerza_lanzamiento - INCREMENTO_FUERZA, FUERZA_MINIMA)
+
+        if keys[pygame.K_x]:
+            if not key_pressed:  # Check if the key was already pressed
+                key_pressed = True
+                if intentos_restantes > 0:
+                    lanzado = True
+                    izquierda = False
+                    derecha = False
+                    cuentaPasos = 0
+                    lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento)
         else:
-            cuentaSalto = ALTURA_SALTO
-            salto = False
-            cuentaSalto_lista = 0
+            key_pressed = False  # Reset key press state when the key is released
 
-    # Draw background and update screen
-    PANTALLA.blit(fondo_surface, (0, 0))
-    PANTALLA.blit(bolirana, (570, 190))
-    PANTALLA.blit(rana1, rana1_rect)
-    PANTALLA.blit(rana2, rana2_rect)
-    PANTALLA.blit(rana3, rana3_rect)
-    recargaPantalla()
+        if keys[pygame.K_a] and px > -200:
+            px -= VELOCIDAD
+            izquierda = True
+            derecha = False
+        elif keys[pygame.K_d] and px < 900 - VELOCIDAD - 40:
+            px += VELOCIDAD
+            izquierda = False
+            derecha = True
+        elif keys[pygame.K_w] and py > 200:
+            py -= VELOCIDAD
+            derecha = True
+        elif keys[pygame.K_s] and py < 300:
+            py += VELOCIDAD
+            derecha = True
+        else:
+            izquierda = False
+            derecha = False
+            cuentaPasos = 0
 
-    # Check if all attempts are used up
-    if intentos_restantes == 0:
-        # Reset game (or implement a game-over screen)
-        pygame.time.delay(2000)  # Wait for 2 seconds before resetting
-        intentos_restantes = 5
-        puntaje = 0
+        if not salto:
+            if keys[pygame.K_SPACE]:
+                salto = True
+                izquierda = False
+                derecha = False
+                cuentaPasos = 0
+        else:
+            if cuentaSalto >= -10:
+                py -= cuentaSalto * 3
+                cuentaSalto -= 1
+            else:
+                cuentaSalto = ALTURA_SALTO
+                salto = False
+                cuentaSalto_lista = 0
+
+        PANTALLA.blit(fondo_surface, (0, 0))
+        PANTALLA.blit(bolirana, (570, 190))
+        PANTALLA.blit(rana1, rana1_rect)
+        PANTALLA.blit(rana2, rana2_rect)
+        PANTALLA.blit(rana3, rana3_rect)
+        recargaPantalla()
+
+        if intentos_restantes == 0:
+            pygame.time.delay(2000) #Cuando se llega a 0 intentos, se para el tiempo 2 segundos y se resetea el puntaje.
+            intentos_restantes = 5
+            puntaje = 0
 
 pygame.quit()
-
-
-    
-
-    
-    
-
-
-    
-
-
-
-       
 
 
 
