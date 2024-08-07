@@ -34,7 +34,7 @@ fondo_surface = pygame.image.load('imagenes/Fondo1.png').convert()
 fondo_surface = pygame.transform.scale(fondo_surface, (W, H))
 
 # Canica
-canica = pygame.image.load('imagenes/migu.png').convert_alpha()
+canica = pygame.image.load('imagenes/canica.png').convert_alpha()
 canica_ui = pygame.transform.scale(canica, (CANICA_DIMENSIONES[0] * 2, CANICA_DIMENSIONES[1] * 2))
 canica = pygame.transform.scale(canica, CANICA_DIMENSIONES)
 
