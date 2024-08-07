@@ -34,7 +34,7 @@ fondo_surface = pygame.image.load('imagenes/Fondo1.png').convert()
 fondo_surface = pygame.transform.scale(fondo_surface, (W, H))
 
 # Canica
-canica = pygame.image.load('imagenes/canica.png').convert_alpha()
+canica = pygame.image.load('imagenes/migu.png').convert_alpha()
 canica_ui = pygame.transform.scale(canica, (CANICA_DIMENSIONES[0] * 2, CANICA_DIMENSIONES[1] * 2))
 canica = pygame.transform.scale(canica, CANICA_DIMENSIONES)
 
@@ -80,17 +80,19 @@ lanzamiento = [pygame.transform.scale(pygame.image.load(f'imagenes/imagenes-lanz
 
 salto_lista = [pygame.transform.scale(pygame.image.load(f'imagenes/Salto/Jump-{i}.png'), PERSONAJE_DIMENSIONES) for i in range(1, 9)]
 
+icons_size = (60,40)
+
 p1 = pygame.image.load('imagenes/p1.png').convert_alpha()
-p1 = pygame.transform.scale(p1, (60, 40))
+p1 = pygame.transform.scale(p1, icons_size)
 
 p2 = pygame.image.load('imagenes/p2.png').convert_alpha()
-p2 = pygame.transform.scale(p2, (60, 40))
+p2 = pygame.transform.scale(p2, icons_size)
 
 p3 = pygame.image.load('imagenes/p3.png').convert_alpha()
-p3 = pygame.transform.scale(p3, (60, 40))
+p3 = pygame.transform.scale(p3, icons_size)
 
 p4 = pygame.image.load('imagenes/p4.png').convert_alpha()
-p4 = pygame.transform.scale(p4, (60, 40))
+p4 = pygame.transform.scale(p4, icons_size)
 #menú
 play = pygame.image.load('menu/play.png').convert_alpha()
 play.set_colorkey((0,0,0))
@@ -169,7 +171,7 @@ jugador_actual = 0
 puntajes = [0 for i in range(n_jugadores)]   # Variable to keep track of the score
 
 pygame.font.init()
-font = pygame.font.SysFont("Comic Sans MS",25)
+font = pygame.font.SysFont("Comic Sans MS",30)
 
 tiempo = 0
 is_ball_charged = False
@@ -237,18 +239,20 @@ rana1_mask = pygame.mask.from_surface(rana1)
 rana2_mask = pygame.mask.from_surface(rana2)
 rana3_mask = pygame.mask.from_surface(rana3)
 
-def reseteo(score_value):
+def reseteo(score_value): #aumenta el puntaje y resetea los valores para otro lanzamiento
     global canica_lanzada, is_ball_charged, tiempo, fuerza_lanzamiento, puntajes, intentos_restantes, jugador_actual, multiplicador, coin_taken, coin_size
     puntajes[jugador_actual] += score_value
-    canica_lanzada = False  # Reset marble if it hits a frog
+    canica_lanzada = False  
     is_ball_charged = False
     tiempo = 0
     fuerza_lanzamiento = FUERZA_INICIAL
     multiplicador = 1
     coin_taken = False
-    coin_rect.update(random.randint(300, 700), random.randint(100,300), coin_size[0], coin_size[1])
+    coin_rect.update(random.randint(300, 700), random.randint(100,300), coin_size[0], coin_size[1]) # dibuja la moneda en una posicion aleatoria
+
     if intentos_restantes == 0:
             intentos_restantes = 5
+            #pasa el turno al siguiente jugador
             if jugador_actual == 0 and n_jugadores >= 2:
                 jugador_actual = 1
             elif jugador_actual == 1 and n_jugadores == 2:
@@ -261,7 +265,7 @@ def reseteo(score_value):
                 jugador_actual = 3
             elif jugador_actual == 3:
                 jugador_actual = 0
-            pygame.time.delay(1000) #Cuando se llega a 0 intentos, se para el tiempo 2 segundos y se resetea el puntaje.
+            pygame.time.delay(100) #Cuando se llega a 0 intentos, se para el tiempo 0.1 segundos
             
 
 def recargaPantalla():
@@ -296,13 +300,19 @@ def recargaPantalla():
             cuentaLanzamiento += 1
     else:
         PANTALLA.blit(quieto, (px, py))
+
+    # dibuja icono encima del jugador actual
     if jugador_actual == 0:
+        pygame.draw.rect(PANTALLA, (0, 0, 0), pygame.Rect(px+190, py+10, icons_size[0], icons_size[1]))
         PANTALLA.blit(p1, (px + 190, py+10))
     elif jugador_actual == 1:
+        pygame.draw.rect(PANTALLA, (0, 0, 0), pygame.Rect(px+190, py+10, icons_size[0], icons_size[1]))
         PANTALLA.blit(p2, (px + 190, py+10))
     elif jugador_actual == 2:
+        pygame.draw.rect(PANTALLA, (0, 0, 0), pygame.Rect(px+190, py+10, icons_size[0], icons_size[1]))
         PANTALLA.blit(p3, (px + 190, py+10))
     elif jugador_actual == 3:
+        pygame.draw.rect(PANTALLA, (0, 0, 0), pygame.Rect(px+190, py+10, icons_size[0], icons_size[1]))
         PANTALLA.blit(p4, (px + 190, py+10))
 
 
@@ -329,6 +339,7 @@ def recargaPantalla():
 
         PANTALLA.blit(canica, canica_rect)
 
+        # la moneda duplica el puntaje si despues le da a una rana en el mismo lanzamiento
         if collision_coin:
             coin_taken = True
             multiplicador = 2
@@ -345,44 +356,41 @@ def recargaPantalla():
         if canica_rect.x > W + 25 or canica_rect.y > H + 25 or canica_rect.x < -25:
             reseteo(0)
         
-    if not coin_taken:
+    if not coin_taken: 
             PANTALLA.blit(coin, coin_rect)
     # Draw launch angle line
     if ajustando_angulo:
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        #pygame.draw.line(PANTALLA, (255, 0, 0), (px + PERSONAJE_OFFSET_X, py + PERSONAJE_OFFSET_Y), (mouse_x, mouse_y), 2)
+        pygame.draw.line(PANTALLA, (255, 0, 0), (px + PERSONAJE_OFFSET_X, py + PERSONAJE_OFFSET_Y), (mouse_x, mouse_y), 2)
         dibujar_trayectoria(PANTALLA, fuerza_lanzamiento, angulo_lanzamiento)
-
-    # Calculate and draw marble trajectory
-
-
 
     # Draw force bar
     barra_rect = pygame.Rect(10, 60, fuerza_lanzamiento * 1.5, 20)
     barra_rect_ful = pygame.Rect(10, 60, FUERZA_MAXIMA * 1.5, 20)
     pygame.draw.rect(PANTALLA, (0, 0, 0), barra_rect_ful)
-    pygame.draw.rect(PANTALLA, (0, 255, 0), barra_rect)
+    pygame.draw.rect(PANTALLA, (134, 206, 203), barra_rect)
 
     # Display score on screen
 
-    for i in range(n_jugadores):
+    for i in range(n_jugadores): # muestra el puntaje dependiendo de la cantidad de jugadores
         if i == 0:
-            color = (255, 0, 0)
+            color = (255, 0, 0) # rojo -> jugador 1
         if i == 1:
-            color = (0, 0, 255)
+            color = (0, 0, 255) # azul -> jugador 2
         if i == 2:
-            color = (255, 255, 0)
+            color = (255, 255, 0) # amarillo -> jugador 3
         if i == 3:
-            color = (0, 255, 0)
+            color = (0, 255, 0) # verde -> jugador 4
         puntaje_font = font.render(f'P{i+1}: {puntajes[i]}', True, color) 
+        puntaje_font_2 = font.render(f'P{i+1}: {puntajes[i]}', True, (0, 0, 0))
+        PANTALLA.blit(puntaje_font_2, (W - 125*n_jugadores + i*125 + 2, 12))
         PANTALLA.blit(puntaje_font, (W - 125*n_jugadores + i*125, 10))
+        
     
 
     # Display remaining attempts on screen
-    #intentos_texto = font.render(f"Intentos restantes: {intentos_restantes}", True, (255, 255, 255))
     for i in range(intentos_restantes):
         PANTALLA.blit(canica_ui, (10 + 30*i, 10))
-    #PANTALLA.blit(intentos_texto, (W - 260, 50))
 
     pygame.display.update()
     
@@ -488,12 +496,7 @@ while ejecuta:
             derecha = False
             cuentaPasos = 0
             lanzar_canica(px, py, angulo_lanzamiento, fuerza_lanzamiento)
-        '''
-        if keys[pygame.K_UP]:
-            fuerza_lanzamiento = min(fuerza_lanzamiento + INCREMENTO_FUERZA, FUERZA_MAXIMA)
-        if keys[pygame.K_DOWN]:
-            fuerza_lanzamiento = max(fuerza_lanzamiento - INCREMENTO_FUERZA, FUERZA_MINIMA)
-        '''
+
         if keys[pygame.K_e]:
             if not key_pressed:  # Check if the key was already pressed
                 key_pressed = True
