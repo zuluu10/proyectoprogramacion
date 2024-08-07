@@ -368,7 +368,7 @@ def recargaPantalla():
     barra_rect = pygame.Rect(10, 60, fuerza_lanzamiento * 1.5, 20)
     barra_rect_ful = pygame.Rect(10, 60, FUERZA_MAXIMA * 1.5, 20)
     pygame.draw.rect(PANTALLA, (0, 0, 0), barra_rect_ful)
-    pygame.draw.rect(PANTALLA, (134, 206, 203), barra_rect)
+    pygame.draw.rect(PANTALLA, (0, 254, 0), barra_rect)
 
     # Display score on screen
 
