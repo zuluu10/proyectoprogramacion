@@ -8,7 +8,6 @@ import threading
 pygame.init()
 pygame.time.Clock
 
-
 # Constantes
 W, H = 1000, 600
 VELOCIDAD = 15
@@ -35,7 +34,7 @@ fondo_surface = pygame.image.load('imagenes/Fondo1.png').convert()
 fondo_surface = pygame.transform.scale(fondo_surface, (W, H))
 
 # Canica
-canica = pygame.image.load('imagenes/canica.png').convert_alpha()
+canica = pygame.image.load('imagenes/migu.png').convert_alpha()
 canica_ui = pygame.transform.scale(canica, (CANICA_DIMENSIONES[0] * 2, CANICA_DIMENSIONES[1] * 2))
 canica = pygame.transform.scale(canica, CANICA_DIMENSIONES)
 
@@ -59,6 +58,14 @@ rana3 = pygame.image.load('imagenes/golden.png').convert_alpha()
 rana3 = pygame.transform.scale(rana3, (24.55, 25.44))
 rana3_rect = rana3.get_rect(topleft=(820,360))
 
+coin = pygame.image.load('imagenes/coin.png').convert_alpha()
+coin_size = (30, 30)
+coin = pygame.transform.scale(coin, coin_size)
+coin_rect = coin.get_rect()
+coin_rect.update(random.randint(300, 700), random.randint(100,300), coin_size[0], coin_size[1])
+coin_taken = False
+multiplicador = 1
+
 # Personaje
 quieto = pygame.image.load('imagenes/Quieto/Idle.png')
 quieto = pygame.transform.scale(quieto, PERSONAJE_DIMENSIONES)
@@ -73,6 +80,17 @@ lanzamiento = [pygame.transform.scale(pygame.image.load(f'imagenes/imagenes-lanz
 
 salto_lista = [pygame.transform.scale(pygame.image.load(f'imagenes/Salto/Jump-{i}.png'), PERSONAJE_DIMENSIONES) for i in range(1, 9)]
 
+p1 = pygame.image.load('imagenes/p1.png').convert_alpha()
+p1 = pygame.transform.scale(p1, (60, 40))
+
+p2 = pygame.image.load('imagenes/p2.png').convert_alpha()
+p2 = pygame.transform.scale(p2, (60, 40))
+
+p3 = pygame.image.load('imagenes/p3.png').convert_alpha()
+p3 = pygame.transform.scale(p3, (60, 40))
+
+p4 = pygame.image.load('imagenes/p4.png').convert_alpha()
+p4 = pygame.transform.scale(p4, (60, 40))
 #menú
 play = pygame.image.load('menu/play.png').convert_alpha()
 play.set_colorkey((0,0,0))
@@ -144,8 +162,11 @@ canica_vy = 0
 
 fuerza_lanzamiento = FUERZA_INICIAL
 
-puntaje = 0  # Variable to keep track of the score
 intentos_restantes = 5  # Variable to keep track of remaining attempts
+
+n_jugadores = 4
+jugador_actual = 0
+puntajes = [0 for i in range(n_jugadores)]   # Variable to keep track of the score
 
 pygame.font.init()
 font = pygame.font.SysFont("Comic Sans MS",25)
@@ -217,20 +238,34 @@ rana2_mask = pygame.mask.from_surface(rana2)
 rana3_mask = pygame.mask.from_surface(rana3)
 
 def reseteo(score_value):
-    global canica_lanzada, is_ball_charged, tiempo, fuerza_lanzamiento, puntaje, intentos_restantes
-    puntaje += score_value
+    global canica_lanzada, is_ball_charged, tiempo, fuerza_lanzamiento, puntajes, intentos_restantes, jugador_actual, multiplicador, coin_taken, coin_size
+    puntajes[jugador_actual] += score_value
     canica_lanzada = False  # Reset marble if it hits a frog
     is_ball_charged = False
     tiempo = 0
     fuerza_lanzamiento = FUERZA_INICIAL
+    multiplicador = 1
+    coin_taken = False
+    coin_rect.update(random.randint(300, 700), random.randint(100,300), coin_size[0], coin_size[1])
     if intentos_restantes == 0:
             intentos_restantes = 5
-            puntaje = 0
+            if jugador_actual == 0 and n_jugadores >= 2:
+                jugador_actual = 1
+            elif jugador_actual == 1 and n_jugadores == 2:
+                jugador_actual = 0
+            elif jugador_actual == 1 and n_jugadores >= 3:
+                jugador_actual = 2
+            elif jugador_actual == 2 and n_jugadores == 3:
+                jugador_actual = 0
+            elif jugador_actual == 2 and n_jugadores >= 4:
+                jugador_actual = 3
+            elif jugador_actual == 3:
+                jugador_actual = 0
             pygame.time.delay(1000) #Cuando se llega a 0 intentos, se para el tiempo 2 segundos y se resetea el puntaje.
             
 
 def recargaPantalla():
-    global cuentaPasos, lanzado, cuentaLanzamiento, salto, cuentaSalto, cuentaSalto_lista, px, py, izquierda, derecha, canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, canica_pos, angulo_lanzamiento, fuerza_lanzamiento, FUERZA_MAXIMA, puntaje, intentos_restantes, tiempo, is_ball_charged
+    global cuentaPasos, lanzado, cuentaLanzamiento, salto, cuentaSalto, cuentaSalto_lista, px, py, izquierda, derecha, canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, canica_pos, angulo_lanzamiento, fuerza_lanzamiento, FUERZA_MAXIMA, puntajes, intentos_restantes, tiempo, is_ball_charged, jugador_actual, coin_taken, multiplicador
 
     # Update the character animation
     if cuentaPasos + 1 >= len(camina):
@@ -261,6 +296,15 @@ def recargaPantalla():
             cuentaLanzamiento += 1
     else:
         PANTALLA.blit(quieto, (px, py))
+    if jugador_actual == 0:
+        PANTALLA.blit(p1, (px + 190, py+10))
+    elif jugador_actual == 1:
+        PANTALLA.blit(p2, (px + 190, py+10))
+    elif jugador_actual == 2:
+        PANTALLA.blit(p3, (px + 190, py+10))
+    elif jugador_actual == 3:
+        PANTALLA.blit(p4, (px + 190, py+10))
+
 
     # Update marble position if launched
     if canica_lanzada:
@@ -276,41 +320,42 @@ def recargaPantalla():
         offset_rana1 = (rana1_rect.x - canica_rect.x, rana1_rect.y - canica_rect.y)
         offset_rana2 = (rana2_rect.x - canica_rect.x, rana2_rect.y - canica_rect.y)
         offset_rana3 = (rana3_rect.x - canica_rect.x, rana3_rect.y - canica_rect.y)
+        offset_coin  = (coin_rect.x - canica_rect.x, coin_rect.y - canica_rect.y)
 
         collision_rana1 = canica_mask.overlap(rana1_mask, offset_rana1)
         collision_rana2 = canica_mask.overlap(rana2_mask, offset_rana2)
         collision_rana3 = canica_mask.overlap(rana3_mask, offset_rana3)
+        collision_coin = canica_mask.overlap(rana1_mask, offset_coin)
 
         PANTALLA.blit(canica, canica_rect)
 
+        if collision_coin:
+            coin_taken = True
+            multiplicador = 2
+
         if collision_rana1:
-            reseteo(100)
+            reseteo(100 * multiplicador)
             
         elif collision_rana2:
-            reseteo(200)
+            reseteo(200 * multiplicador)
             
         elif collision_rana3:
-            reseteo(500)    
+            reseteo(500 * multiplicador)
 
         if canica_rect.x > W + 25 or canica_rect.y > H + 25 or canica_rect.x < -25:
             reseteo(0)
-
         
-
+    if not coin_taken:
+            PANTALLA.blit(coin, coin_rect)
     # Draw launch angle line
     if ajustando_angulo:
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        pygame.draw.line(PANTALLA, (255, 0, 0), (px + PERSONAJE_OFFSET_X, py + PERSONAJE_OFFSET_Y), (mouse_x, mouse_y), 2)
+        #pygame.draw.line(PANTALLA, (255, 0, 0), (px + PERSONAJE_OFFSET_X, py + PERSONAJE_OFFSET_Y), (mouse_x, mouse_y), 2)
         dibujar_trayectoria(PANTALLA, fuerza_lanzamiento, angulo_lanzamiento)
 
     # Calculate and draw marble trajectory
 
-    # Display angle and force on screen
-    angulo_texto = font.render(f"Ángulo: {int(angulo_lanzamiento)}°", True, (255, 255, 255))
-    #PANTALLA.blit(angulo_texto, (10, 10))
 
-    fuerza_texto = font.render(f"Fuerza: {fuerza_lanzamiento}", True, (255, 255, 255))
-    #PANTALLA.blit(fuerza_texto, (10, 50))
 
     # Draw force bar
     barra_rect = pygame.Rect(10, 60, fuerza_lanzamiento * 1.5, 20)
@@ -319,8 +364,19 @@ def recargaPantalla():
     pygame.draw.rect(PANTALLA, (0, 255, 0), barra_rect)
 
     # Display score on screen
-    puntaje_texto = font.render(f"Puntaje: {puntaje}", True, (255, 255, 255))
-    PANTALLA.blit(puntaje_texto, (W - 200, 10))
+
+    for i in range(n_jugadores):
+        if i == 0:
+            color = (255, 0, 0)
+        if i == 1:
+            color = (0, 0, 255)
+        if i == 2:
+            color = (255, 255, 0)
+        if i == 3:
+            color = (0, 255, 0)
+        puntaje_font = font.render(f'P{i+1}: {puntajes[i]}', True, color) 
+        PANTALLA.blit(puntaje_font, (W - 125*n_jugadores + i*125, 10))
+    
 
     # Display remaining attempts on screen
     #intentos_texto = font.render(f"Intentos restantes: {intentos_restantes}", True, (255, 255, 255))
@@ -415,6 +471,11 @@ while ejecuta:
         keys = pygame.key.get_pressed()
         key_mouse = pygame.mouse.get_pressed()
         if key_mouse[0] and not canica_lanzada:
+            ajustando_angulo = True
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            dx = mouse_x - (px + PERSONAJE_OFFSET_X)
+            dy = (py + PERSONAJE_OFFSET_Y) - mouse_y
+            angulo_lanzamiento = math.degrees(math.atan2(dy, dx))
             is_ball_charged = True
             fuerza_lanzamiento += (FUERZA_MAXIMA - FUERZA_INICIAL) / (charge_time_seg * RELOJ.get_fps()) #aumenta la fuerza de modo que llega al maximo al cabo de la cantidad de tiempo dictada por la variable: charge_time_seg
             dibujar_trayectoria(PANTALLA, fuerza_lanzamiento, angulo_lanzamiento)
