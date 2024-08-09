@@ -141,7 +141,7 @@ lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/musica/cancion{i}.mp3")) for
 
 #canciones
 cambiar_cancion = threading.Event()
-muted = True
+muted = False
 
 # Variables del personaje y juego
 px, py = 50, 200
@@ -433,6 +433,11 @@ while ejecuta:
                     current_screen = 'help'
                 elif botonquit.is_clicked():
                     ejecuta = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_n:
+                    cambiar_cancion.set()
+                elif event.key == pygame.K_m:
+                    muted = not muted
 
     elif current_screen == 'help':
         PANTALLA.blit(controles, (0, 0))
@@ -445,6 +450,11 @@ while ejecuta:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if botonback.is_clicked():
                     current_screen = 'menu'
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_n:
+                    cambiar_cancion.set()
+                elif event.key == pygame.K_m:
+                    muted = not muted
 
     elif current_screen == 'game':
         for event in pygame.event.get():
@@ -475,6 +485,8 @@ while ejecuta:
                     cambiar_cancion.set()
                 elif event.key == pygame.K_m:
                     muted = not muted
+                elif event.key == pygame.K_ESCAPE:
+                    current_screen = 'menu'
 
         keys = pygame.key.get_pressed()
         key_mouse = pygame.mouse.get_pressed()
