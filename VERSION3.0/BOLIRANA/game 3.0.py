@@ -8,6 +8,7 @@ import threading
 pygame.init()
 pygame.time.Clock
 
+print()
 # Constantes
 W, H = 1000, 600
 VELOCIDAD = 15
@@ -34,7 +35,7 @@ fondo_surface = pygame.image.load('imagenes/Fondo1.png').convert()
 fondo_surface = pygame.transform.scale(fondo_surface, (W, H))
 
 # Canica
-canica = pygame.image.load('imagenes/canica.png').convert_alpha()
+canica = pygame.image.load('imagenes/migu.png').convert_alpha()
 canica_ui = pygame.transform.scale(canica, (CANICA_DIMENSIONES[0] * 2, CANICA_DIMENSIONES[1] * 2))
 canica = pygame.transform.scale(canica, CANICA_DIMENSIONES)
 
@@ -249,11 +250,11 @@ boton_jugador_3 = Boton(650, 150, 100, 50, botonj3)
 boton_jugador_4 = Boton(800, 150, 100, 50, botonj4)
 #musica
 pygame.mixer.init()
-lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/musica/cancion{i}.mp3")) for i in range(1,9)]
+lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/cancion{i}.mp3")) for i in range(1,9)]
 
 #canciones
 cambiar_cancion = threading.Event()
-muted = False
+muted = True
 
 # Variables del personaje y juego
 px, py = 50, 200
@@ -276,7 +277,7 @@ canica_vy = 0
 
 fuerza_lanzamiento = FUERZA_INICIAL
 
-intentos_restantes = 5  # Variable para realizar seguimiento a los intentos restantes
+intentos_restantes = 2  # Variable para realizar seguimiento a los intentos restantes
 
 n_jugadores = 4
 jugador_actual = 0
@@ -292,6 +293,8 @@ charge_time_seg = 2
 
 # Variables para guardar las selecciones
 num_rondas = 1
+subita = False
+best_player = []
 #n_jugadores = 1
 skins = ["Paisa", "Llanero", "Rolo", "Paisa"]  # Máximo 4 jugadores
 
@@ -338,7 +341,7 @@ def menu_principal():
 
 background_seleccion = pygame.image.load('menu/menu2/background.jpeg')
 def menu_seleccion():
-    global num_rondas, n_jugadores, skins, current_screen, muted
+    global num_rondas, n_jugadores, skins, current_screen, muted, puntajes
     ejecutando_menu_seleccion = True
     
     
@@ -380,6 +383,7 @@ def menu_seleccion():
             n_jugadores = 3
         if boton_jugador_4.is_clicked():
             n_jugadores = 4
+        puntajes = [0 for i in range(n_jugadores)]
 
         # Mostrar el número de jugadores seleccionado
         texto_jugadores = font.render(f"Players: {n_jugadores}", True, COLOR_BLANCO)
@@ -416,6 +420,8 @@ def menu_seleccion():
                 elif event.key == pygame.K_m:
                     muted = not muted
                 elif event.key == pygame.K_ESCAPE:
+                    puntajes = [0 for i in range(n_jugadores)]
+                    print(puntajes)
                     current_screen = 'menu'
                     ejecutando_menu_seleccion = False    
             if event.type == pygame.QUIT:
@@ -499,22 +505,50 @@ def reseteo(score_value): #aumenta el puntaje y resetea los valores para otro la
     coin_rect.update(random.randint(300, 700), random.randint(100,300), coin_size[0], coin_size[1]) # dibuja la moneda en una posicion aleatoria
 
     if intentos_restantes == 0:
-            intentos_restantes = 5
+            intentos_restantes = 2
             #pasa el turno al siguiente jugador
             if jugador_actual == 0 and n_jugadores >= 2:
                 jugador_actual = 1
             elif jugador_actual == 1 and n_jugadores == 2:
                 jugador_actual = 0
+                fin_de_set()
             elif jugador_actual == 1 and n_jugadores >= 3:
                 jugador_actual = 2
             elif jugador_actual == 2 and n_jugadores == 3:
                 jugador_actual = 0
+                fin_de_set()
             elif jugador_actual == 2 and n_jugadores >= 4:
                 jugador_actual = 3
             elif jugador_actual == 3:
                 jugador_actual = 0
+                fin_de_set()
             pygame.time.delay(100) #Cuando se llega a 0 intentos, se para el tiempo 0.1 segundos
             
+def fin_de_set():
+    global num_rondas, puntajes, subita, current_screen, best_player
+    if num_rondas >= 2 and not subita:
+        num_rondas -= 1
+    else:
+        max_puntaje = 0
+        best_player = []
+        for i in range(len(puntajes)):
+            if puntajes[i] > max_puntaje:
+                best_player.clear()
+                best_player.append(i+1)
+                max_puntaje = puntajes[i]
+            elif puntajes[i] == max_puntaje:
+                best_player.append(i+1)
+
+        if len(best_player) != 1:
+            subita = True
+        else:
+            subita = False
+            current_screen = 'ganador'
+            puntajes = [0 for i in range(n_jugadores)]
+            num_rondas = 1
+
+
+                
 # Asegúrate de que la lista skins esté correctamente inicializada
 if len(skins) < n_jugadores:
     # Rellenar con una skin predeterminada si no se ha seleccionado ninguna
@@ -524,7 +558,7 @@ if len(skins) < n_jugadores:
 
 
 def recargaPantalla():
-    global cuentaPasos, lanzado, cuentaLanzamiento, salto, cuentaSalto, cuentaSalto_lista, px, py, izquierda, derecha, canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, canica_pos, angulo_lanzamiento, fuerza_lanzamiento, FUERZA_MAXIMA, puntajes, intentos_restantes, tiempo, is_ball_charged, jugador_actual, coin_taken, multiplicador, skins_images, skins, jugador_actual
+    global cuentaPasos, lanzado, cuentaLanzamiento, salto, cuentaSalto, cuentaSalto_lista, px, py, izquierda, derecha, canica_lanzada, canica_x, canica_y, canica_vx, canica_vy, canica_pos, angulo_lanzamiento, fuerza_lanzamiento, FUERZA_MAXIMA, puntajes, intentos_restantes, tiempo, is_ball_charged, jugador_actual, coin_taken, multiplicador, skins_images, skins, jugador_actual, subita
 
     skin_actual = skins_images[skins[jugador_actual]]
     # Actualizar la animación del personaje
@@ -618,6 +652,14 @@ def recargaPantalla():
     pygame.draw.rect(PANTALLA, (0, 0, 0), barra_rect_ful)
     pygame.draw.rect(PANTALLA, (0, 254, 0), barra_rect)
 
+    # mostrar rondas restantes
+    if subita == False:
+        texto_rondas = font.render(f"Rounds: {num_rondas}", True, COLOR_BLANCO)
+    elif subita == True:
+        texto_rondas = font.render('Muerte Subita', True, (255, 0, 0))
+    if n_jugadores != 1:
+        PANTALLA.blit(texto_rondas, (10, 110))
+
     # Mostrar puntaje en pantalla
 
     for i in range(n_jugadores): # muestra el puntaje dependiendo de la cantidad de jugadores
@@ -640,6 +682,8 @@ def recargaPantalla():
     for i in range(intentos_restantes):
         PANTALLA.blit(canica_ui, (10 + 30*i, 10))
 
+    
+
     pygame.display.update()
     
 # Configuración del reloj del juego
@@ -659,7 +703,6 @@ current_screen = 'menu'
 
 while ejecuta:
     RELOJ.tick(24)
-    print(num_rondas)
     if current_screen == 'menu':
         menu_principal()
     
@@ -682,7 +725,22 @@ while ejecuta:
     elif current_screen == 'settings':
         menu_seleccion()
 
-
+    elif current_screen == 'ganador':
+        PANTALLA.blit(background, (0, 0))
+        #pygame.draw.rect(PANTALLA, (0, 0, 0), pygame.Rect(250, 250, 500, 50))
+        texto_ganar = font.render(f'El jugador {best_player[0]} ha ganado', True, COLOR_BLANCO)
+        texto_tecla =  font.render(f'Presione cualquier tecla', True, COLOR_BLANCO)
+        texto_tecla2 = font.render(f'     para continuar', True, COLOR_BLANCO)
+        PANTALLA.blit(texto_ganar, (100, 285))
+        PANTALLA.blit(texto_tecla, (100, 330))
+        PANTALLA.blit(texto_tecla2, (100, 355))
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ejecuta = False
+            if event.type == pygame.KEYDOWN:
+                current_screen = 'menu'
+                best_player = []
 
     elif current_screen == 'game':
         for event in pygame.event.get():
@@ -710,6 +768,7 @@ while ejecuta:
                 elif event.key == pygame.K_m:
                     muted = not muted
                 elif event.key == pygame.K_ESCAPE:
+                    puntajes = [0 for i in range(n_jugadores)]
                     current_screen = 'menu'
 
         keys = pygame.key.get_pressed()
@@ -778,7 +837,7 @@ while ejecuta:
                 cuentaSalto = ALTURA_SALTO
                 salto = False
                 cuentaSalto_lista = 0
-
+            
         PANTALLA.blit(fondo_surface, (0, 0))
         PANTALLA.blit(bolirana, (570, 190))
         PANTALLA.blit(rana1, rana1_rect)
