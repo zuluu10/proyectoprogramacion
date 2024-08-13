@@ -254,7 +254,7 @@ lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/musica/cancion{i}.mp3")) for
 
 #canciones
 cambiar_cancion = threading.Event()
-muted = True
+muted = False
 
 # Variables del personaje y juego
 px, py = 50, 200
