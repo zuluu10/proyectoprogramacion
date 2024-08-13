@@ -8,7 +8,7 @@ import threading
 pygame.init()
 pygame.time.Clock
 
-print()
+
 # Constantes
 W, H = 1000, 600
 VELOCIDAD = 15
@@ -35,7 +35,7 @@ fondo_surface = pygame.image.load('imagenes/Fondo1.png').convert()
 fondo_surface = pygame.transform.scale(fondo_surface, (W, H))
 
 # Canica
-canica = pygame.image.load('imagenes/migu.png').convert_alpha()
+canica = pygame.image.load('imagenes/canica.png').convert_alpha()
 canica_ui = pygame.transform.scale(canica, (CANICA_DIMENSIONES[0] * 2, CANICA_DIMENSIONES[1] * 2))
 canica = pygame.transform.scale(canica, CANICA_DIMENSIONES)
 
@@ -250,7 +250,7 @@ boton_jugador_3 = Boton(650, 150, 100, 50, botonj3)
 boton_jugador_4 = Boton(800, 150, 100, 50, botonj4)
 #musica
 pygame.mixer.init()
-lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/cancion{i}.mp3")) for i in range(1,9)]
+lista_musica_fondo = [(pygame.mixer.Sound(f"sonidos/musica/cancion{i}.mp3")) for i in range(1,9)]
 
 #canciones
 cambiar_cancion = threading.Event()
@@ -277,7 +277,7 @@ canica_vy = 0
 
 fuerza_lanzamiento = FUERZA_INICIAL
 
-intentos_restantes = 2  # Variable para realizar seguimiento a los intentos restantes
+intentos_restantes = 5  # Variable para realizar seguimiento a los intentos restantes
 
 n_jugadores = 4
 jugador_actual = 0
@@ -421,7 +421,6 @@ def menu_seleccion():
                     muted = not muted
                 elif event.key == pygame.K_ESCAPE:
                     puntajes = [0 for i in range(n_jugadores)]
-                    print(puntajes)
                     current_screen = 'menu'
                     ejecutando_menu_seleccion = False    
             if event.type == pygame.QUIT:
@@ -505,7 +504,7 @@ def reseteo(score_value): #aumenta el puntaje y resetea los valores para otro la
     coin_rect.update(random.randint(300, 700), random.randint(100,300), coin_size[0], coin_size[1]) # dibuja la moneda en una posicion aleatoria
 
     if intentos_restantes == 0:
-            intentos_restantes = 2
+            intentos_restantes = 5
             #pasa el turno al siguiente jugador
             if jugador_actual == 0 and n_jugadores >= 2:
                 jugador_actual = 1
